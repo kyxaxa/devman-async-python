@@ -5,7 +5,10 @@ from random import choice, randint
 from itertools import cycle
 import logging
 from sys import exit
+import argparse
 from typing import List
+import os
+
 
 from settings import *
 from draw_blink import blink
@@ -13,13 +16,34 @@ from curses_tools import draw_frame, read_controls, get_frame_size
 from read_data import read_all_text_frames
 
 
-class SpaceGame:
+def load_spaceship_frames(all_text_frames: dict = None) -> List[str]:
+    """Loading default spaceship text frames"""
+    if all_text_frames is None:
+        all_text_frames = read_all_text_frames()
+    frame1 = all_text_frames['rocket_frame_1.txt']
+    frame2 = all_text_frames['rocket_frame_2.txt']
 
-    def __init__(self):
-        pass
+    spaceship_frames = [
+        frame1,
+        frame2,
+    ]
+    return spaceship_frames
 
-    def run(self):
-        curses.wrapper(run_game)
+
+def parse_arguments():
+    """Parse all game arguments"""
+    parser = argparse.ArgumentParser(description='Space game: move your SpaceShip between the stars')
+
+    parser.add_argument('-l', '--log_level', default='production', choices=['production', 'develop'], help="level of debugging details (production==write to file, develop=echo details to console)")
+    parser.add_argument('-t', '--tic_timeout', default=0.1, help="timeout after every tic in main loop")
+
+    parser.add_argument('--cnt_stars', default=10, type=int, help="stars quantity")
+
+    parser.add_argument('--limit_borders_for_spaceship_moves', default=True, action='store_true', help="limit borders for spaceship moves? If False you'll be able to move the spaceship out of the sky")
+    parser.add_argument('-a', '--spaceship_acceleration', default=3, type=int, help="spaceship acceleration. Higher value == bigger step on mouse press")
+
+    args = parser.parse_args()
+    return args
 
 
 def setup_logging(level="production"):
@@ -39,10 +63,38 @@ def setup_logging(level="production"):
         exit(0)
 
 
+class SpaceGame:
+    """Main class to setup and run the Space Game"""
+
+    def __init__(self):
+        args = parse_arguments()
+        self.args = args
+
+        setup_logging(args.log_level)
+
+        self.all_text_frames  = read_all_text_frames()
+
+
+    def run(self):
+        curses.wrapper(
+            run_game,
+            tic_timeout=self.args.tic_timeout,
+            cnt_stars=self.args.cnt_stars,
+
+            # spaceship settings
+            limit_borders_for_spaceship_moves=self.args.limit_borders_for_spaceship_moves,
+            spaceship_acceleration=self.args.spaceship_acceleration,
+            spaceship_frames=load_spaceship_frames(self.all_text_frames),
+        )
+
+
 def run_game(
         canvas,
         tic_timeout: float = 0.1,
-        spaceship_frames: list = None,
+        cnt_stars: int = 200,  # круто - 50_000 даже может :)
+        limit_borders_for_spaceship_moves : bool = True,
+        spaceship_acceleration : int = 3,
+        spaceship_frames : list = None,
         ) -> None:
     """
     Draw stars, ship and all other game objects.
@@ -51,7 +103,6 @@ def run_game(
     if spaceship_frames is None:
         spaceship_frames = load_spaceship_frames()
 
-    cnt_stars = 200 # круто - 50_000 даже может :)
     star_symbols = [
         '*', '.', '+', ':',
     ]
@@ -75,7 +126,11 @@ def run_game(
 
     shot = animate_gun_shot(canvas, center_y, center_x, -0.5, 1)
 
-    spaceship = animate_spaceship(canvas, center_y, center_x, frames=spaceship_frames)
+    spaceship = animate_spaceship(canvas, center_y, center_x,
+                                  limit_with_borders=limit_borders_for_spaceship_moves,
+                                  acceleration=spaceship_acceleration,
+                                  frames = spaceship_frames,
+    )
 
     coroutines.extend([
         shot,
@@ -100,19 +155,6 @@ def run_game(
 
         canvas.refresh()
         sleep(tic_timeout)
-
-
-def load_spaceship_frames() -> List[str]:
-    """Loading default spaceship text frames"""
-    all_text_frames = read_all_text_frames()
-    frame1 = all_text_frames['rocket_frame_1.txt']
-    frame2 = all_text_frames['rocket_frame_2.txt']
-
-    spaceship_frames = [
-        frame1,
-        frame2,
-    ]
-    return spaceship_frames
 
 
 async def animate_gun_shot(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
@@ -153,7 +195,7 @@ async def animate_spaceship(
         start_row, start_column,
         frames: List[str] = [],
         acceleration: int = 3,
-        want_limit_with_borders: bool = True,
+        limit_with_borders: bool = True,
         ):
     """Control the spaceship"""
     cycle_frames = cycle(frames)
@@ -172,7 +214,7 @@ async def animate_spaceship(
         row = row + rows_direction * acceleration
         column = column + columns_direction * acceleration
 
-        if want_limit_with_borders:
+        if limit_with_borders:
             row = max(row, 0)
             row = min(row, max_row - max_frame_height)
 
@@ -187,9 +229,5 @@ async def animate_spaceship(
 
 
 if __name__ == '__main__':
-    level = "production"
-    level = "develop"
-    setup_logging(level)
-
     game = SpaceGame()
     game.run()
