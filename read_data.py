@@ -13,7 +13,7 @@ def read_all_text_frames():
     frames = {}
     for file_path in file_paths:
         if not os.path.isfile(file_path):
-            raise errors.NoFileError(f'NO FILE {file_path}')
+            raise errors.NoFileError(file_path)
             logging.ERROR(f'NO FILE {file_path}')
             continue
 

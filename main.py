@@ -5,38 +5,52 @@ from random import choice, randint
 from itertools import cycle
 import logging
 from sys import exit
+from typing import List
 
+from settings import *
 from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
 from read_data import read_all_text_frames
 
-#   coding level. Will determine main debug settings.
-level = 'production'
-level = 'develop'
 
-#   setup logging
-if level == 'develop':
-    logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-                        level=logging.DEBUG,
-                        )
-elif level == 'production':
-    logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
-                        level=logging.DEBUG,
-                        filename='temp/game_log.log',
-                        )
-else:
-    logging.critical(f'UNKNOWN {level=}')
-    exit(0)
+class SpaceGame:
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        curses.wrapper(run_game)
+
+
+def setup_logging(level="production"):
+    """setup logging depending on level"""
+
+    if level == 'develop':
+        logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
+                            level=logging.DEBUG,
+                            )
+    elif level == 'production':
+        logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
+                            level=logging.DEBUG,
+                            filename='temp/game_log.log',
+                            )
+    else:
+        logging.critical(f'UNKNOWN {level=}')
+        exit(0)
 
 
 def run_game(
         canvas,
         tic_timeout: float = 0.1,
+        spaceship_frames: list = None,
         ) -> None:
     """
     Draw stars, ship and all other game objects.
     Run main loop to control all the object states.
     """
+    if spaceship_frames is None:
+        spaceship_frames = load_spaceship_frames()
+
     cnt_stars = 200 # круто - 50_000 даже может :)
     star_symbols = [
         '*', '.', '+', ':',
@@ -60,7 +74,8 @@ def run_game(
     coroutines = []
 
     shot = animate_gun_shot(canvas, center_y, center_x, -0.5, 1)
-    spaceship = animate_spaceship(canvas, center_y, center_x)
+
+    spaceship = animate_spaceship(canvas, center_y, center_x, frames=spaceship_frames)
 
     coroutines.extend([
         shot,
@@ -85,6 +100,19 @@ def run_game(
 
         canvas.refresh()
         sleep(tic_timeout)
+
+
+def load_spaceship_frames() -> List[str]:
+    """Loading default spaceship text frames"""
+    all_text_frames = read_all_text_frames()
+    frame1 = all_text_frames['rocket_frame_1.txt']
+    frame2 = all_text_frames['rocket_frame_2.txt']
+
+    spaceship_frames = [
+        frame1,
+        frame2,
+    ]
+    return spaceship_frames
 
 
 async def animate_gun_shot(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
@@ -123,17 +151,11 @@ async def animate_gun_shot(canvas, start_row, start_column, rows_speed=-0.3, col
 async def animate_spaceship(
         canvas,
         start_row, start_column,
-        acceleration=3,
-        want_limit_with_borders=1,
+        frames: List[str] = [],
+        acceleration: int = 3,
+        want_limit_with_borders: bool = True,
         ):
     """Control the spaceship"""
-    frame1 = all_text_frames['rocket_frame_1.txt']
-    frame2 = all_text_frames['rocket_frame_2.txt']
-
-    frames = [
-        frame1,
-        frame2,
-    ]
     cycle_frames = cycle(frames)
 
     frames_sizes = [get_frame_size(frame) for frame in frames]
@@ -165,6 +187,9 @@ async def animate_spaceship(
 
 
 if __name__ == '__main__':
-    all_text_frames = read_all_text_frames()
+    level = "production"
+    level = "develop"
+    setup_logging(level)
 
-    curses.wrapper(run_game)
+    game = SpaceGame()
+    game.run()
