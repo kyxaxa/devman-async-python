@@ -42,11 +42,13 @@ def run_game(
         '*', '.', '+', ':',
     ]
 
-    #   setup board
+    #   setup game board
+    curses.update_lines_cols()
     curses.curs_set(False)
     canvas.nodelay(True)  # canvas.nodelay — сделать ввод неблокирующим
     canvas.border()
 
+    #   calculate used variables
     height, width = canvas.getmaxyx()
 
     center_x = width // 2
@@ -54,7 +56,7 @@ def run_game(
 
     logging.debug(f'{height=} {width=}, {center_x=} {center_y=}')
 
-    #   gathering all coroutines
+    #   gather all coroutines
     coroutines = []
 
     shot = animate_gun_shot(canvas, center_y, center_x, -0.5, 1)
@@ -72,7 +74,7 @@ def run_game(
         star = blink(canvas, row, column, star_symbol)
         coroutines.append(star)
 
-    # main event loop
+    #   main event loop
     coroutines = set(coroutines)
     while coroutines:
         for coro in coroutines.copy():
@@ -157,15 +159,12 @@ async def animate_spaceship(
 
         draw_frame(canvas, row, column, frame)
 
-        [await asyncio.sleep(0) for _ in range(2)] #   кадры анимации сменяют друг друга раз в два кадра
+        [await asyncio.sleep(0) for _ in range(2)]  # кадры анимации сменяют друг друга раз в два кадра
 
         draw_frame(canvas, row, column, frame, negative=True)
 
 
-
 if __name__ == '__main__':
     all_text_frames = read_all_text_frames()
-
-    curses.update_lines_cols()
 
     curses.wrapper(run_game)

@@ -1,0 +1,3 @@
+asyncio
+curses
+windows-curses
