@@ -202,9 +202,11 @@ def draw_game(
     """Draw all objects of the space game.
 
     ask: я уже описал все параметры в parse_game_arguments_from_console()
-        (в help= , там как раз все специально для человека.
+        * в help= , там как раз все специально для человека
+        * в readme
         Получается я еще раз тут должен это все продублировать?
-        Минус: в 2-х местах дублирую ненужное)
+        Минус: в 3-х местах дублирую ненужное :(
+        Как избегать дублирования документации?
 
     ask: я уже типы прописал в аргументах ф-ии. В док-строках их тоже нужно дублировать?
 
@@ -319,9 +321,9 @@ async def animate_spaceship(
     """Control the spaceship"""
     frames_cycle = cycle(frames)
 
-    frames_sizes = [get_frame_size(frame) for frame in frames]
-    max_frame_height = max(_[0] for _ in frames_sizes)
-    max_frame_width = max(_[1] for _ in frames_sizes)
+    heights, widths = zip(*[get_frame_size(frame) for frame in frames])
+    max_frame_height = max(heights)
+    max_frame_width = max(widths)
 
     rows, columns = canvas.getmaxyx()
     max_row, max_column = rows - 1, columns - 1
@@ -352,6 +354,10 @@ if __name__ == '__main__':
     game.run()
 
 """
+* ask: насколько стоил усложнять ввод кучей вариантов - и консолью, и глобальными переменными? 
+    И потом их комплексной обработкой? Тут обработка этих переменных занимает больше кода чем сама игра.
+    Или это для обучения?
+    
 * ask: cnt_stars - я всегда использую cnt_ как сокращение от count_ . 
     Насколько его стоит заменить (count_stars, stars_count), если я этим сокращением пользуюсь 10 лет?
 
