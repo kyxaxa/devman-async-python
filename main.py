@@ -13,7 +13,7 @@ import os
 from settings import load_settings_from_file_to_environment
 from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
-from read_data_frames import read_all_text_frames
+from read_data_frames import read_all_text_frames, load_spaceship_frames
 import errors
 
 logger = logging.getLogger('space_game')
@@ -21,20 +21,6 @@ logger = logging.getLogger('space_game')
 # logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
 #                     level=logging.DEBUG,
 #                     )
-
-
-def load_spaceship_frames(all_text_frames: dict = None) -> List[str]:
-    """Loading default spaceship text frames"""
-    if all_text_frames is None:
-        all_text_frames = read_all_text_frames()
-    frame1 = all_text_frames['rocket_frame_1.txt']
-    frame2 = all_text_frames['rocket_frame_2.txt']
-
-    spaceship_frames = [
-        frame1,
-        frame2,
-    ]
-    return spaceship_frames
 
 
 def parse_game_arguments_from_console():
@@ -215,12 +201,12 @@ def draw_game(
         ) -> None:
     """Draw all objects of the space game.
 
-    Ask: я уже описал все параметры в parse_game_arguments_from_console()
+    ask: я уже описал все параметры в parse_game_arguments_from_console()
         (в help= , там как раз все специально для человека.
         Получается я еще раз тут должен это все продублировать?
         Минус: в 2-х местах дублирую ненужное)
 
-    Ask: я уже типы прописал в аргументах ф-ии. В док-строках их тоже нужно дублировать?
+    ask: я уже типы прописал в аргументах ф-ии. В док-строках их тоже нужно дублировать?
 
     Draw stars, ship and all other game objects.
     Run main loop to control all the object states.
@@ -331,7 +317,7 @@ async def animate_spaceship(
         unlimited_space: bool = False,  # is space unlimited?
         ):
     """Control the spaceship"""
-    cycle_frames = cycle(frames)
+    frames_cycle = cycle(frames)
 
     frames_sizes = [get_frame_size(frame) for frame in frames]
     max_frame_height = max(_[0] for _ in frames_sizes)
@@ -342,7 +328,7 @@ async def animate_spaceship(
 
     row, column = start_row, start_column
 
-    for frame in cycle_frames:
+    for frame in frames_cycle:
         rows_direction, columns_direction, space_pressed = read_controls(canvas)
         row = row + rows_direction * acceleration
         column = column + columns_direction * acceleration
@@ -356,7 +342,7 @@ async def animate_spaceship(
 
         draw_frame(canvas, row, column, frame)
 
-        [await asyncio.sleep(0) for _ in range(2)]  # кадры анимации сменяют друг друга раз в два кадра
+        await asyncio.sleep(0)
 
         draw_frame(canvas, row, column, frame, negative=True)
 
@@ -364,3 +350,14 @@ async def animate_spaceship(
 if __name__ == '__main__':
     game = SpaceGame()
     game.run()
+
+"""
+* ask: cnt_stars - я всегда использую cnt_ как сокращение от count_ . 
+    Насколько его стоит заменить (count_stars, stars_count), если я этим сокращением пользуюсь 10 лет?
+
+* ask: cycle_frames у меня это цикл фреймов 
+    Cамо использование ф-ии cycle(frames) намекает что это и будет цикл фреймов
+    cycled_frames было бы циклированные фреймы. Как по мне шило на мыло - или вы чувствуете что cycled_frames явно лучше? 
+    Вообще заменил на frames_cycle (цикл фреймов)
+
+"""
