@@ -14,6 +14,11 @@ from settings import load_settings_from_file_to_environment
 from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
 from read_data import read_all_text_frames
+import errors
+
+# logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
+#                     level=logging.DEBUG,
+#                     )
 
 
 def load_spaceship_frames(all_text_frames: dict = None) -> List[str]:
@@ -49,12 +54,23 @@ def parse_game_arguments_from_console():
     parser.add_argument('-t', '--tic_timeout', default=0.1, help="timeout after every tic in main loop",
                         action=MarkNonedefault,
                         )
+    parser.add_argument('--settings_file', default='settings.env',
+                        help="file with settings, lines in format `var=value`",
+                        action=MarkNonedefault,
+                        )
+    parser.add_argument('--log_file', default='temp/log.env', help="file with game logs",
+                        action=MarkNonedefault,
+                        )
 
     parser.add_argument('--cnt_stars', default=200, type=int, help="stars quantity",
                         action=MarkNonedefault,
                         )
 
-    parser.add_argument('--unlimited_space', action='store_true',
+    parser.add_argument('--unlimited_space',
+                        # action='store_true',
+                        default=False,
+                        type=bool,
+                        choices=[True, False],
                         help="UnlimitedSpace mode. You'll be able to move the spaceship out of the sky. "
                         "Otherwise your fly is limited with the game's borders.",
                         action=MarkNonedefault,
@@ -68,59 +84,98 @@ def parse_game_arguments_from_console():
     return args
 
 
-def setup_logging(level="production"):
-    """setup logging depending on level"""
-
-    if level == 'develop':
-        logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-                            level=logging.DEBUG,
-                            )
-    elif level == 'production':
-        logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
-                            level=logging.DEBUG,
-                            filename='temp/game_log.log',
-                            )
-    else:
-        logging.critical(f'UNKNOWN {level=}')
-        exit(0)
-
-
-class SpaceGame:
-    """Main class to setup and run the Space Game"""
+class UserVars:
+    """Reading user variables from console or from the environment
+        vars to environment are setuped through the file with that vars"""
 
     def __init__(self):
-
-        load_settings_from_file_to_environment()
-
         self.args = parse_game_arguments_from_console()
 
-        setup_logging(self.args.log_level)
+        if self.get_user_variable_from_commandLine('settings_file') is not None \
+                and not os.path.isfile(self.args.settings_file):  # user defined file with settings should exists
+            raise errors.NoFileError(self.args.settings_file)
 
-        self.all_text_frames = read_all_text_frames()
+        if os.path.isfile(self.args.settings_file):
+            load_settings_from_file_to_environment(self.args.settings_file)
 
-    def get_user_variable(self, key: str = 'tic_timeout', to_type=None):
+        self.vars = self.get_user_variables()
+
+    def get_user_variable_from_commandLine(self, key: str = 'tic_timeout', default=None):
         """
-        getting user variable, first check if is in command line, next in system variables (file settings.env)
+        get variable from command line
+        """
+        key_nondefault = f'{key}_nondefault'
+        var = getattr(self.args, key) if hasattr(self.args, key_nondefault) else default
+        return var
+
+    def get_user_variable(self, name: str = 'tic_timeout', to_type: callable = None):
+        """
+        search for user variable
+            * in command line
+            * in system variables
+            * in defaults
         to_type: if is not None, convert it to that type
         """
 
-        key_nondefault = f'{key}_nondefault'
-
         possible_values = [
-            getattr(self.args, key) if hasattr(self.args, key_nondefault) else None,
-            os.getenv(key, None),
-            getattr(self.args, key),
+            ('command line', self.get_user_variable_from_commandLine(name, None)),
+            ('environment', os.getenv(name, None)),
+            ('command line default', getattr(self.args, name)),
         ]
 
-        for var in possible_values:
+        for found, var in possible_values:
             if var is not None:
                 break
+
+        if to_type == bool and isinstance(var, str) and var.lower() in ['false', '0']:  # dotenv don't understand bool
+            var = False
 
         if to_type is not None:
             var = to_type(var)
 
+        logging.debug(f'    {name} = {var}, in {found=}, {type(var)=}')
+
         return var
 
+    def get_user_variables(self):
+        descriptions = [
+            ('tic_timeout', float),
+            ('cnt_stars', int),
+            ('unlimited_space', bool),
+            ('spaceship_acceleration', int),
+        ]
+        vars = {}
+        for name, to_type in descriptions:
+            value = self.get_user_variable(name, to_type)
+            vars[name] = value
+
+        return vars
+
+
+class SpaceGame(UserVars):
+    """Main class to setup and run the Space Game"""
+
+    def __init__(self):
+        super().__init__()
+
+        self.setup_logging(self.args.log_level)
+
+        self.all_text_frames = read_all_text_frames()
+
+    def setup_logging(self, level="production"):
+        """setup logging depending on level"""
+
+        if level == 'develop':
+            logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
+                                level=logging.DEBUG,
+                                )
+        elif level == 'production':
+            logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
+                                level=logging.DEBUG,
+                                # filename='temp/game_log.log',
+                                )
+        else:
+            logging.critical(f'UNKNOWN {level=}')
 
     def run(self):
         """
@@ -128,12 +183,12 @@ class SpaceGame:
         """
         curses.wrapper(
             draw_game,
-            tic_timeout=self.get_user_variable('tic_timeout', float),
-            cnt_stars=self.get_user_variable('cnt_stars', int),
+            tic_timeout=self.vars['tic_timeout'],
+            cnt_stars=self.vars['cnt_stars'],
 
             # spaceship settings
-            unlimited_space=self.get_user_variable('unlimited_space', bool),
-            spaceship_acceleration=self.get_user_variable('spaceship_acceleration', int),
+            unlimited_space=self.vars['unlimited_space'],
+            spaceship_acceleration=self.vars['spaceship_acceleration'],
             spaceship_frames=load_spaceship_frames(self.all_text_frames),
         )
 
