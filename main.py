@@ -13,8 +13,10 @@ import os
 from settings import load_settings_from_file_to_environment
 from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
-from read_data import read_all_text_frames
+from read_data_frames import read_all_text_frames
 import errors
+
+logger = logging.getLogger('space_game')
 
 # logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
 #                     level=logging.DEBUG,
@@ -47,22 +49,27 @@ def parse_game_arguments_from_console():
 
     parser = argparse.ArgumentParser(description='Space game: move your SpaceShip between the stars')
 
-    parser.add_argument('-l', '--log_level', default='production', choices=['production', 'develop'],
+    parser.add_argument('-l', '--log_level',
+                        default='production', choices=['production', 'develop'],
                         help="level of debugging details (production==write to file, develop=echo details to console)",
                         action=MarkNonedefault,
                         )
-    parser.add_argument('-t', '--tic_timeout', default=0.1, help="timeout after every tic in main loop",
+    parser.add_argument('-t', '--tic_timeout',
+                        default=0.1, help="timeout after every tic in main loop",
                         action=MarkNonedefault,
                         )
-    parser.add_argument('--settings_file', default='settings.env',
+    parser.add_argument('--settings_file',
+                        default='settings.env',
                         help="file with settings, lines in format `var=value`",
                         action=MarkNonedefault,
                         )
-    parser.add_argument('--log_file', default='temp/log.env', help="file with game logs",
+    parser.add_argument('--log_file',
+                        default='temp/game_logs.log', help="file with game logs",
                         action=MarkNonedefault,
                         )
 
-    parser.add_argument('--cnt_stars', default=200, type=int, help="stars quantity",
+    parser.add_argument('--cnt_stars',
+                        default=200, type=int, help="stars quantity",
                         action=MarkNonedefault,
                         )
 
@@ -75,7 +82,8 @@ def parse_game_arguments_from_console():
                         "Otherwise your fly is limited with the game's borders.",
                         action=MarkNonedefault,
                         )
-    parser.add_argument('-a', '--spaceship_acceleration', default=3, type=int,
+    parser.add_argument('-a', '--spaceship_acceleration',
+                        default=3, type=int,
                         help="spaceship acceleration. Higher value == bigger step on mouse press",
                         action=MarkNonedefault,
                         )
@@ -100,13 +108,21 @@ class UserVars:
 
         self.vars = self.get_user_variables()
 
-    def get_user_variable_from_commandLine(self, key: str = 'tic_timeout', default=None):
-        """
-        get variable from command line
-        """
-        key_nondefault = f'{key}_nondefault'
-        var = getattr(self.args, key) if hasattr(self.args, key_nondefault) else default
-        return var
+    def get_user_variables(self):
+        descriptions = [
+            ('tic_timeout', float),
+            ('cnt_stars', int),
+            ('unlimited_space', bool),
+            ('spaceship_acceleration', int),
+            ('log_file', str),
+            ('settings_file', str),
+        ]
+        vars = {}
+        for name, to_type in descriptions:
+            value = self.get_user_variable(name, to_type)
+            vars[name] = value
+
+        return vars
 
     def get_user_variable(self, name: str = 'tic_timeout', to_type: callable = None):
         """
@@ -133,23 +149,17 @@ class UserVars:
         if to_type is not None:
             var = to_type(var)
 
-        logging.debug(f'    {name} = {var}, in {found=}, {type(var)=}')
+        logger.debug(f'    {name} = {var}, in {found=}, {type(var)=}')
 
         return var
 
-    def get_user_variables(self):
-        descriptions = [
-            ('tic_timeout', float),
-            ('cnt_stars', int),
-            ('unlimited_space', bool),
-            ('spaceship_acceleration', int),
-        ]
-        vars = {}
-        for name, to_type in descriptions:
-            value = self.get_user_variable(name, to_type)
-            vars[name] = value
-
-        return vars
+    def get_user_variable_from_commandLine(self, key: str = 'tic_timeout', default=None):
+        """
+        get variable from command line
+        """
+        key_nondefault = f'{key}_nondefault'
+        var = getattr(self.args, key) if hasattr(self.args, key_nondefault) else default
+        return var
 
 
 class SpaceGame(UserVars):
@@ -164,18 +174,18 @@ class SpaceGame(UserVars):
 
     def setup_logging(self, level="production"):
         """setup logging depending on level"""
+        logger.setLevel(logging.DEBUG)
 
         if level == 'develop':
             logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-                                level=logging.DEBUG,
                                 )
         elif level == 'production':
             logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
                                 level=logging.DEBUG,
-                                # filename='temp/game_log.log',
+                                filename=self.vars['log_file'],
                                 )
         else:
-            logging.critical(f'UNKNOWN {level=}')
+            logger.critical(f'UNKNOWN {level=}')
 
     def run(self):
         """
@@ -205,7 +215,6 @@ def draw_game(
     Draw stars, ship and all other game objects.
     Run main loop to control all the object states.
     """
-    logging.critical(f'{type(tic_timeout)}, {tic_timeout=}')
 
     if spaceship_frames is None:
         spaceship_frames = load_spaceship_frames()
