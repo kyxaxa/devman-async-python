@@ -38,11 +38,10 @@ def load_spaceship_frames(all_text_frames: dict = None) -> List[str]:
 
 
 def parse_game_arguments_from_console():
-    """Parse all game arguments from console
-    """
+    """Parse all game arguments from console"""
 
     class MarkNonedefault(argparse.Action):
-        """mark if the variable is not default (user-defined, from console)"""
+        """Mark if the variable is not default (user-defined, from console)"""
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, values)
             setattr(namespace, f'{self.dest}_nondefault', True)
@@ -93,8 +92,9 @@ def parse_game_arguments_from_console():
 
 
 class UserVars:
-    """Reading user variables from console or from the environment
-        vars to environment are setuped through the file with that vars"""
+    """Reading user variables from console or from the environment.
+
+    Vars to environment are setuped through the file with that vars."""
 
     def __init__(self):
         self.args = parse_game_arguments_from_console()
@@ -125,11 +125,13 @@ class UserVars:
         return vars
 
     def get_user_variable(self, name: str = 'tic_timeout', to_type: callable = None):
-        """
-        search for user variable
+        """Search for user variable.
+
+        Search order:
             * in command line
             * in system variables
             * in defaults
+
         to_type: if is not None, convert it to that type
         """
 
@@ -154,9 +156,7 @@ class UserVars:
         return var
 
     def get_user_variable_from_commandLine(self, key: str = 'tic_timeout', default=None):
-        """
-        get variable from command line
-        """
+        """Get variable from command line"""
         key_nondefault = f'{key}_nondefault'
         var = getattr(self.args, key) if hasattr(self.args, key_nondefault) else default
         return var
@@ -172,8 +172,12 @@ class SpaceGame(UserVars):
 
         self.all_text_frames = read_all_text_frames()
 
-    def setup_logging(self, level="production"):
-        """setup logging depending on level"""
+    def setup_logging(self, level="production") -> None:
+        """Setup logging depending on level.
+        
+        Args:
+            level (str): production or develop
+        """
         logger.setLevel(logging.DEBUG)
 
         if level == 'develop':
@@ -188,9 +192,7 @@ class SpaceGame(UserVars):
             logger.critical(f'UNKNOWN {level=}')
 
     def run(self):
-        """
-        run the game with all user settings
-        """
+        """Run the game"""
         curses.wrapper(
             draw_game,
             tic_timeout=self.vars['tic_timeout'],
@@ -206,14 +208,29 @@ class SpaceGame(UserVars):
 def draw_game(
         canvas,
         tic_timeout: float = 0.1,
-        cnt_stars: int = 200,  # круто - 50_000 даже может :)
+        cnt_stars: int = 200,
         unlimited_space: bool = False,
         spaceship_acceleration: int = 3,
         spaceship_frames: list = None,
         ) -> None:
-    """
+    """Draw all objects of the space game.
+
+    Ask: я уже описал все параметры в parse_game_arguments_from_console()
+        (в help= , там как раз все специально для человека.
+        Получается я еще раз тут должен это все продублировать?
+        Минус: в 2-х местах дублирую ненужное)
+
+    Ask: я уже типы прописал в аргументах ф-ии. В док-строках их тоже нужно дублировать?
+
     Draw stars, ship and all other game objects.
     Run main loop to control all the object states.
+
+    Args:
+        tic_timeout: sleep time for main loop
+        cnt_stars:  count stars on the sky
+        unlimited_space: is space unlimited
+        spaceship_acceleration: spaceship acceleration. Higher value == bigger step on mouse press
+        spaceship_frames: list of text pictures of spaceship
     """
 
     if spaceship_frames is None:
@@ -274,7 +291,7 @@ def draw_game(
 
 
 async def animate_gun_shot(canvas, start_row, start_column, rows_speed=-0.3, columns_speed=0):
-    """Display animation of gun shot, direction and speed can be specified."""
+    """Display animation of gun shot, direction and speed can be specified"""
 
     row, column = start_row, start_column
 

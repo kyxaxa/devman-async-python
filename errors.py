@@ -4,7 +4,7 @@ class Error(Exception):
 
 
 class NoFileError(Error):
-    """Exception raised when file file_path does not exists
+    """Exception raised when file file_path does not exists.
 
     Attributes:
         file_path -- input file_path which caused the error
