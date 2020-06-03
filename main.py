@@ -9,7 +9,6 @@ import argparse
 from typing import List
 import os
 
-
 from settings import load_settings_from_file_to_environment
 from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
@@ -17,10 +16,6 @@ from read_data_frames import read_all_text_frames, load_spaceship_frames
 import errors
 
 logger = logging.getLogger('space_game')
-
-# logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-#                     level=logging.DEBUG,
-#                     )
 
 
 def parse_game_arguments_from_console():
@@ -80,12 +75,12 @@ def parse_game_arguments_from_console():
 class UserVars:
     """Reading user variables from console or from the environment.
 
-    Vars to environment are setuped through the file with that vars."""
+    Vars to environment were sent through the file with that vars."""
 
     def __init__(self):
         self.args = parse_game_arguments_from_console()
 
-        if self.get_user_variable_from_commandLine('settings_file') is not None \
+        if self.get_nonDefault_variable_from_commandLine('settings_file') is not None \
                 and not os.path.isfile(self.args.settings_file):  # user defined file with settings should exists
             raise errors.NoFileError(self.args.settings_file)
 
@@ -122,7 +117,7 @@ class UserVars:
         """
 
         possible_values = [
-            ('command line', self.get_user_variable_from_commandLine(name, None)),
+            ('command line', self.get_nonDefault_variable_from_commandLine(name, None)),
             ('environment', os.getenv(name, None)),
             ('command line default', getattr(self.args, name)),
         ]
@@ -141,10 +136,10 @@ class UserVars:
 
         return var
 
-    def get_user_variable_from_commandLine(self, key: str = 'tic_timeout', default=None):
-        """Get variable from command line"""
-        key_nondefault = f'{key}_nondefault'
-        var = getattr(self.args, key) if hasattr(self.args, key_nondefault) else default
+    def get_nonDefault_variable_from_commandLine(self, name: str = 'tic_timeout', default=None):
+        """Get non-default variable from command line"""
+        name_nondefault = f'{name}_nondefault'
+        var = getattr(self.args, name) if hasattr(self.args, name_nondefault) else default
         return var
 
 
