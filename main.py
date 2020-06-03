@@ -4,7 +4,6 @@ import curses
 from random import choice, randint
 from itertools import cycle
 import logging
-from sys import exit
 import argparse
 from typing import List
 import os
