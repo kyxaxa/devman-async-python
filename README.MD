@@ -65,7 +65,7 @@ python3 main.py
 
 Настройки в **командной строке**:
 
-`--cnt_stars` (целое число): количество звезд в космосе
+`--stars_count` (целое число): количество звезд в космосе
 
 `--unlimited_space` (True или False): режим бесконечного космоса, тогда космос бесконечный и корабль можно посылать за границы отображаемого экрана. По дефолту `False`, полет ограничен экраном. 
 
@@ -74,7 +74,7 @@ python3 main.py
 Пример запуска игры со специальными настройками:
 
 ```shell 
-python3 main.py --cnt_stars 20 --unlimited_space True --spaceship_acceleration 10
+python3 main.py --stars_count 20 --unlimited_space True --spaceship_acceleration 10
 ```
 
 Разработчики могут подсмотреть другие секретные настройки и их типы при запуске хелпа
@@ -87,7 +87,7 @@ python3 main.py -h
 Пример файла:
 
 ```
-cnt_stars=20
+stars_count=20
 unlimited_space=True
 spaceship_acceleration=10
 ```

@@ -22,12 +22,12 @@ class SpaceGame:
     def __init__(
             self,
             tic_timeout: float = 0.1,
-            cnt_stars: int = 200,
+            stars_count: int = 200,
             unlimited_space: bool = False,
             spaceship_acceleration: int = 1,
             ) -> None:
         self.tic_timeout = tic_timeout
-        self.cnt_stars = cnt_stars
+        self.stars_count = stars_count
         self.unlimited_space = unlimited_space
         self.spaceship_acceleration = spaceship_acceleration
         logger.debug(f'SpaceGame settings: {vars(self)}')
@@ -39,7 +39,7 @@ class SpaceGame:
         curses.wrapper(
             draw_game,
             tic_timeout=self.tic_timeout,
-            cnt_stars=self.cnt_stars,
+            stars_count=self.stars_count,
 
             # spaceship settings
             unlimited_space=self.unlimited_space,
@@ -51,28 +51,19 @@ class SpaceGame:
 def draw_game(
         canvas,
         tic_timeout: float = 0.1,
-        cnt_stars: int = 200,
+        stars_count: int = 200,
         unlimited_space: bool = False,
         spaceship_acceleration: int = 3,
         spaceship_frames: list = None,
         ) -> None:
     """Draw all objects of the space game.
 
-    ask: я уже описал все параметры в parse_game_arguments_from_console()
-        * в help= , там как раз все специально для человека
-        * в readme
-        Получается я еще раз тут должен это все продублировать?
-        Минус: в 3-х местах дублирую ненужное :(
-        Как избегать дублирования документации?
-
-    ask: я уже типы прописал в аргументах ф-ии. В док-строках их тоже нужно дублировать?
-
     Draw stars, ship and all other game objects.
-    Run main loop to control all the object states.
+    Run main loop to control all the states of the objects.
 
     Args:
         tic_timeout: sleep time for main loop
-        cnt_stars:  count stars on the sky
+        stars_count:  count stars on the sky
         unlimited_space: is space unlimited
         spaceship_acceleration: spaceship acceleration. Higher value == bigger step on mouse press
         spaceship_frames: list of text pictures of spaceship
@@ -115,7 +106,7 @@ def draw_game(
         spaceship,
     ])
 
-    for _ in range(cnt_stars):
+    for _ in range(stars_count):
         row = randint(1, height - 1)
         column = randint(1, width - 1)
         star_symbol = choice(star_symbols)
@@ -235,7 +226,7 @@ def parse_game_args():
         help="file with game logs",
     )
     parser.add(
-        '--cnt_stars',
+        '--stars_count',
         default=200, type=int,
         help="stars quantity",
     )
@@ -275,7 +266,7 @@ def main():
 
     game = SpaceGame(
         tic_timeout=args.tic_timeout,
-        cnt_stars=args.cnt_stars,
+        stars_count=args.stars_count,
         unlimited_space=args.unlimited_space,
         spaceship_acceleration=args.spaceship_acceleration,
     )
@@ -284,14 +275,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-"""
-* ask:
-    Насколько его стоит заменить (count_stars, stars_count), если я этим сокращением пользуюсь 10 лет?
-
-* ask: cycle_frames у меня это цикл фреймов 
-    Cамо использование ф-ии cycle(frames) намекает что это и будет цикл фреймов
-    cycled_frames было бы циклированные фреймы. Как по мне шило на мыло - или вы чувствуете что cycled_frames явно лучше? 
-    Вообще заменил на frames_cycle (цикл фреймов)
-
-"""
