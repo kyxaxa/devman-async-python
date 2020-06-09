@@ -5,6 +5,7 @@ from random import choice, randint
 from itertools import cycle
 from typing import List
 import logging
+import os
 
 import configargparse
 
@@ -12,11 +13,10 @@ from draw_blink import blink
 from curses_tools import draw_frame, read_controls, get_frame_size
 from read_data_frames import read_all_text_frames, load_spaceship_frames
 
+logger = logging.getLogger(__file__)
 
-logger = logging.getLogger('space_game')
 
-
-class SpaceGame():
+class SpaceGame:
     """Main class to setup and run the Space Game"""
 
     def __init__(
@@ -25,36 +25,14 @@ class SpaceGame():
             cnt_stars: int = 200,
             unlimited_space: bool = False,
             spaceship_acceleration: int = 1,
-            log_level: str = 'production',
-            log_file: str = 'temp/game_logs.log',
             ) -> None:
-        self.log_file = log_file
         self.tic_timeout = tic_timeout
         self.cnt_stars = cnt_stars
         self.unlimited_space = unlimited_space
         self.spaceship_acceleration = spaceship_acceleration
-
-        # self.setup_logging(log_level)
+        logger.debug(f'SpaceGame settings: {vars(self)}')
 
         self.all_text_frames = read_all_text_frames()
-
-    def setup_logging(self, level="production") -> None:
-        """Setup logging depending on level.
-        
-        Args:
-            level (str): production or develop
-        """
-
-        if level == 'develop':
-            logging.basicConfig(format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
-                                )
-        elif level == 'production':
-            logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s',
-                                level=logging.DEBUG,
-                                filename=self.vars['log_file'],
-                                )
-        else:
-            logger.critical(f'UNKNOWN {level=}')
 
     def run(self):
         """Run the game"""
@@ -254,7 +232,6 @@ def parse_game_args():
     )
     parser.add(
         '--log_file',
-        default='temp/game_logs.log',
         help="file with game logs",
     )
     parser.add(
@@ -278,20 +255,38 @@ def parse_game_args():
     return options
 
 
-if __name__ == '__main__':
+def main():
+    """
+    ask: чем это лучше простой вставки после  if __name__ == '__main__':?
+        Вызовы basicConfigи setLevel в отличие от getLogger меняют настройки программы и её поведение, а потому должны быть спрятаны внутри ifmain. Еще лучше — завести функцию def main и перенести настройки туда.
+    """
     args = parse_game_args()
+
+    logging.basicConfig(
+        format='%(filename)s[:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
+        level=logging.DEBUG,
+    )
+
+    if args.log_file:
+        fh = logging.FileHandler(args.log_file)
+        formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(lineno)04d | %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     game = SpaceGame(
         tic_timeout=args.tic_timeout,
-        log_file=args.log_file,
         cnt_stars=args.cnt_stars,
         unlimited_space=args.unlimited_space,
         spaceship_acceleration=args.spaceship_acceleration,
     )
     game.run()
 
+
+if __name__ == '__main__':
+    main()
+
 """
-* ask: cnt_stars - я всегда использую cnt_ как сокращение от count_ . 
+* ask:
     Насколько его стоит заменить (count_stars, stars_count), если я этим сокращением пользуюсь 10 лет?
 
 * ask: cycle_frames у меня это цикл фреймов 
