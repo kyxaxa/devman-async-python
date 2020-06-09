@@ -1,4 +1,4 @@
 asyncio
 curses
 windows-curses
-python-dotenv
+ConfigArgParse
